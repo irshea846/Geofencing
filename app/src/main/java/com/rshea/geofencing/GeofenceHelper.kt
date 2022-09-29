@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.os.Build
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofenceStatusCodes
@@ -37,7 +38,11 @@ class GeofenceHelper(ctx: Context) : ContextWrapper(ctx) {
         val intent = Intent(this, GeofenceBroadcastReceiver::class.java)
         // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when calling
         // addGeofences() and removeGeofences().
-        return PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+        var flag = PendingIntent.FLAG_UPDATE_CURRENT
+        if (Build.VERSION.SDK_INT >= 31) {
+            flag = PendingIntent.FLAG_IMMUTABLE
+        }
+        return PendingIntent.getBroadcast(this, REQUEST_CODE, intent, flag)
     }
 
     fun getPendingIntent(): PendingIntent? {

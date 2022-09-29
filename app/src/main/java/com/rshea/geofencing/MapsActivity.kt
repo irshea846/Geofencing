@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -37,6 +38,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         private const val TAG = "MapsActivity"
         private const val GEOFENCE_ADDED = "Geofence added successfully!!!"
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1
+        private const val BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE = 2
         private const val GEOFENCE_RADIUS = 100.0f
         private const val ZOOM_RADIUS = 16.0f
         private val RISE_CAFE = object {
@@ -138,9 +140,42 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
                 permissionDenied = true
             }
         }
+        if (requestCode == BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE) {
+            if (permissions.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "ACCESS_BACKGROUND_LOCATION Granted", Toast.LENGTH_LONG).show()
+            } else {
+                // Permission was denied. Display an error message
+                // Display the missing permission error dialog when the fragments resume.
+                Toast.makeText(this, "ACCESS_BACKGROUND_LOCATION Denied", Toast.LENGTH_LONG).show()
+            }
+        }
+
     }
 
     override fun onMapLongClick(latLng: LatLng?) {
+        if (Build.VERSION.SDK_INT >= 29) {
+            if (PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(this,
+                    android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                handleMapLongClick(latLng)
+            } else {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                        android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+                    ActivityCompat.requestPermissions(this,
+                        arrayOf(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+                        BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE)
+                } else {
+                    ActivityCompat.requestPermissions(this,
+                        arrayOf(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+                        BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE)
+                }
+            }
+        } else {
+            handleMapLongClick(latLng)
+        }
+    }
+
+    private fun handleMapLongClick(latLng: LatLng?) {
         mMap.clear()
         mMap.addMarker(latLng?.let { MarkerOptions().position(it) })
         addCircle(latLng)
@@ -177,8 +212,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
     }
 
-    private fun setOnCameraMoveListener(ctx: Context) {
-
-    }
+//    private fun setOnCameraMoveListener(ctx: Context) {
+//
+//    }
 }
 

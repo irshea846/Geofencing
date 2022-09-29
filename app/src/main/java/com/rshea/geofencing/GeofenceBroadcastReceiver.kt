@@ -13,11 +13,11 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         // This method is called when the BroadcastReceiver is receiving an Intent broadcast.
-        val geofencingEvent = GeofencingEvent.fromIntent(intent)
 //        val broadcastIntent = Intent(context, MapsActivity::class.java)
 //        val bundle = bundleOf(Pair("GeofencingEvent", geofencingEvent))
 //        context.startActivity(broadcastIntent, bundle)
 
+        val geofencingEvent = GeofencingEvent.fromIntent(intent)
         when (geofencingEvent.geofenceTransition) {
             Geofence.GEOFENCE_TRANSITION_ENTER -> {
                 Toast.makeText(context, "GEOFENCE_TRANSITION_ENTER", Toast.LENGTH_LONG).show()
@@ -29,7 +29,5 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                 Toast.makeText(context, "GEOFENCE_TRANSITION_EXIT", Toast.LENGTH_LONG).show()
             }
         }
-
-
     }
 }
