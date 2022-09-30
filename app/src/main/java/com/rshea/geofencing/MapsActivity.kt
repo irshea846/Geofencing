@@ -1,38 +1,35 @@
 package com.rshea.geofencing
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofencingClient
-import com.google.android.gms.location.GeofencingEvent
 import com.google.android.gms.location.LocationServices
-
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.CircleOptions
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.*
 import com.rshea.geofencing.databinding.ActivityMapsBinding
 
-class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLongClickListener {
+
+class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLongClickListener, SharedPreferences.OnSharedPreferenceChangeListener {
 
     private lateinit var mMap: GoogleMap
     private lateinit var mGeofencingClient: GeofencingClient
+    private lateinit var mGeoFencePref: SharedPreferences
+    private lateinit var mGeofenceHelper: GeofenceHelper
     private lateinit var binding: ActivityMapsBinding
     private var permissionDenied = false
-    private lateinit var mGeofenceHelper: GeofenceHelper
 
     companion object {
         private const val TAG = "MapsActivity"
@@ -61,24 +58,27 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
         mGeofencingClient = LocationServices.getGeofencingClient(this)
         mGeofenceHelper = GeofenceHelper(this)
+
+        mGeoFencePref = getSharedPreferences("TriggeredGeofenceTransitionStatus", MODE_PRIVATE)
+        mGeoFencePref.registerOnSharedPreferenceChangeListener(this)
     }
 
-    override fun onNewIntent(intent: Intent?) {
-        super.onNewIntent(intent)
-        val geofencingEvent = GeofencingEvent.fromIntent(intent)
-
-        when (geofencingEvent.geofenceTransition) {
-            Geofence.GEOFENCE_TRANSITION_ENTER -> {
-                Toast.makeText(this, "GEOFENCE_TRANSITION_ENTER", Toast.LENGTH_LONG).show()
-            }
-            Geofence.GEOFENCE_TRANSITION_DWELL -> {
-                Toast.makeText(this, "GEOFENCE_TRANSITION_DWELL", Toast.LENGTH_LONG).show()
-            }
-            Geofence.GEOFENCE_TRANSITION_EXIT -> {
-                Toast.makeText(this, "GEOFENCE_TRANSITION_EXIT", Toast.LENGTH_LONG).show()
+    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
+        if (key.equals("TriggeredGeofenceTransitionStatus")) {
+            when (mGeoFencePref.getInt("TriggeredGeofenceTransitionStatus", -1)) {
+                Geofence.GEOFENCE_TRANSITION_ENTER -> {
+                    Toast.makeText(this, "GEOFENCE_TRANSITION_ENTER", Toast.LENGTH_LONG).show()
+                }
+                Geofence.GEOFENCE_TRANSITION_DWELL -> {
+                    Toast.makeText(this, "GEOFENCE_TRANSITION_DWELL", Toast.LENGTH_LONG).show()
+                }
+                Geofence.GEOFENCE_TRANSITION_EXIT -> {
+                    Toast.makeText(this, "GEOFENCE_TRANSITION_EXIT", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
+
     /**
      * Manipulates the map once available.
      * This callback is triggered when the map is ready to be used.
@@ -98,7 +98,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
         val riseCafe = LatLng(RISE_CAFE.lat, RISE_CAFE.lng)
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(riseCafe, ZOOM_RADIUS))
-        //setOnCameraMoveListener(this)
 
         enableUserLocation()
 
@@ -177,7 +176,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
     private fun handleMapLongClick(latLng: LatLng?) {
         mMap.clear()
-        mMap.addMarker(latLng?.let { MarkerOptions().position(it) })
+        //mMap.addMarker(latLng?.let { MarkerOptions().position(it) })
         addCircle(latLng)
         if (latLng != null) {
             addGeofence(latLng)
@@ -199,7 +198,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
                 val error = mGeofenceHelper.getErrorMessage(it)
                 Log.i(TAG, error)
             }
-
         }
     }
 
@@ -211,9 +209,5 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         mMap.addCircle(circleOptions)
 
     }
-
-//    private fun setOnCameraMoveListener(ctx: Context) {
-//
-//    }
 }
 

@@ -35,6 +35,9 @@ class GeofenceHelper(ctx: Context) : ContextWrapper(ctx) {
     }
 
     fun geofencePendingIntent(): PendingIntent {
+        if (pendingIntent != null) {
+            return pendingIntent as PendingIntent
+        }
         val intent = Intent(this, GeofenceBroadcastReceiver::class.java)
         // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when calling
         // addGeofences() and removeGeofences().
@@ -42,19 +45,8 @@ class GeofenceHelper(ctx: Context) : ContextWrapper(ctx) {
         if (Build.VERSION.SDK_INT >= 31) {
             flag = PendingIntent.FLAG_IMMUTABLE
         }
-        return PendingIntent.getBroadcast(this, REQUEST_CODE, intent, flag)
-    }
-
-    fun getPendingIntent(): PendingIntent? {
-        if (pendingIntent != null) {
-            return pendingIntent
-        }
-
-        val intent = Intent(context, BroadcastReceiver::class.java)
-        pendingIntent = PendingIntent.getBroadcast(context, REQUEST_CODE, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT)
-
-        return pendingIntent
+        pendingIntent = PendingIntent.getBroadcast(this, REQUEST_CODE, intent, flag)
+        return pendingIntent as PendingIntent
     }
 
     fun getErrorMessage(e: Exception): String {
