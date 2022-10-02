@@ -42,7 +42,7 @@ class GeofenceHelper(ctx: Context) : ContextWrapper(ctx) {
         // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when calling
         // addGeofences() and removeGeofences().
         var flag = PendingIntent.FLAG_UPDATE_CURRENT
-        if (Build.VERSION.SDK_INT >= 31) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             flag = PendingIntent.FLAG_IMMUTABLE
         }
         pendingIntent = PendingIntent.getBroadcast(this, REQUEST_CODE, intent, flag)

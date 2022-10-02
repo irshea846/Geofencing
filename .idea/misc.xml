@@ -3,6 +3,8 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="app/src/main/res/drawable/ic_blue.xml" value="0.2035" />
+        <entry key="app/src/main/res/drawable/ic_green.xml" value="0.2035" />
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.1823915237134208" />
         <entry key="app/src/main/res/layout/activity_maps.xml" value="0.3836050724637681" />
         <entry key="app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" value="0.1125" />

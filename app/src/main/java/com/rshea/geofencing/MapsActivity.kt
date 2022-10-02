@@ -4,16 +4,19 @@ import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.location.Location
 import android.os.Build
 import android.os.Bundle
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.google.android.gms.location.Geofence
-import com.google.android.gms.location.GeofencingClient
-import com.google.android.gms.location.LocationServices
+import androidx.core.graphics.drawable.toBitmap
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.api.GoogleApiClient
+import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -22,14 +25,27 @@ import com.google.android.gms.maps.model.*
 import com.rshea.geofencing.databinding.ActivityMapsBinding
 
 
-class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLongClickListener, SharedPreferences.OnSharedPreferenceChangeListener {
+class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLongClickListener, GoogleApiClient.ConnectionCallbacks,
+    GoogleApiClient.OnConnectionFailedListener, LocationListener, SharedPreferences.OnSharedPreferenceChangeListener {
 
     private lateinit var mMap: GoogleMap
     private lateinit var mGeofencingClient: GeofencingClient
     private lateinit var mGeoFencePref: SharedPreferences
     private lateinit var mGeofenceHelper: GeofenceHelper
+    private lateinit var mGoogleApiClient: GoogleApiClient
+    private lateinit var mBlueMarkerDescriptor: BitmapDescriptor
+    private lateinit var mGreenMarkerDescriptor: BitmapDescriptor
+    private var mGeofenceTransitionState: Int = Geofence.GEOFENCE_TRANSITION_EXIT
     private lateinit var binding: ActivityMapsBinding
     private var permissionDenied = false
+    private lateinit var locationRequest: LocationRequest
+
+    private var markerDescriptor: BitmapDescriptor? = null
+    private val accuracyStrokeColor = Color.argb(255, 130, 182, 228)
+    private val accuracyFillColor = Color.argb(100, 130, 182, 228)
+
+    private var positionMarker: Marker? = null
+    private var accuracyCircle: Circle? = null
 
     companion object {
         private const val TAG = "MapsActivity"
@@ -45,6 +61,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         private const val GEOFENCE_ID = "RISE_CAFE"
     }
 
+    @SuppressLint("UseCompatLoadingForDrawables")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -55,6 +72,15 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+        mGoogleApiClient = GoogleApiClient.Builder(this)
+            .addApi(LocationServices.API)
+            .addConnectionCallbacks(this)
+            .addOnConnectionFailedListener(this).build();
+
+        mBlueMarkerDescriptor =
+            BitmapDescriptorFactory.fromBitmap(getDrawable(R.drawable.ic_blue)!!.toBitmap(40, 60))
+        mGreenMarkerDescriptor =
+            BitmapDescriptorFactory.fromBitmap(getDrawable(R.drawable.ic_green)!!.toBitmap(40, 60))
 
         mGeofencingClient = LocationServices.getGeofencingClient(this)
         mGeofenceHelper = GeofenceHelper(this)
@@ -63,9 +89,81 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         mGeoFencePref.registerOnSharedPreferenceChangeListener(this)
     }
 
+    override fun onStart() {
+        super.onStart()
+        mGoogleApiClient.connect()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        mGoogleApiClient.disconnect()
+    }
+
+    @SuppressLint("MissingPermission")
+    override fun onConnected(bundle: Bundle?) {
+        locationRequest = LocationRequest.create()
+        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        locationRequest.interval = 1000
+        LocationServices.getFusedLocationProviderClient(this).requestLocationUpdates(
+            locationRequest,
+            object: LocationCallback() {
+                override fun onLocationResult(locationResult: LocationResult) {
+                    for (location in locationResult.locations) {
+                        val latitude: Double = location.latitude
+                        val longitude: Double = location.longitude
+                        positionMarker?.remove()
+                        val positionMarkerOptions = MarkerOptions()
+                            .position(LatLng(latitude, longitude))
+                            .anchor(0.5f, 0.5f)
+                        if (mGeofenceTransitionState == Geofence.GEOFENCE_TRANSITION_EXIT) {
+                            positionMarkerOptions.icon(mBlueMarkerDescriptor)
+                        } else {
+                            positionMarkerOptions.icon(mGreenMarkerDescriptor)
+                        }
+                        positionMarker = mMap.addMarker(positionMarkerOptions)
+                    }
+                }
+            },
+            Looper.getMainLooper()
+        )
+    }
+
+    override fun onConnectionSuspended(p0: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onConnectionFailed(p0: ConnectionResult) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onLocationChanged(location: Location) {
+        val latitude: Double = location.latitude
+        val longitude: Double = location.longitude
+        val accuracy: Float = location.accuracy
+        positionMarker?.remove()
+        val positionMarkerOptions = MarkerOptions()
+            .position(LatLng(latitude, longitude))
+            .anchor(0.5f, 0.5f)
+        if (mGeofenceTransitionState == Geofence.GEOFENCE_TRANSITION_EXIT) {
+            positionMarkerOptions.icon(mBlueMarkerDescriptor)
+        } else {
+            positionMarkerOptions.icon(mGreenMarkerDescriptor)
+        }
+        positionMarker = mMap.addMarker(positionMarkerOptions)
+//        accuracyCircle?.remove()
+//        val accuracyCircleOptions = CircleOptions()
+//            .center(LatLng(latitude, longitude))
+//            .radius(accuracy.toDouble())
+//            .fillColor(accuracyFillColor)
+//            .strokeColor(accuracyStrokeColor)
+//            .strokeWidth(2.0f)
+//        accuracyCircle = mMap.addCircle(accuracyCircleOptions)
+    }
+
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         if (key.equals("TriggeredGeofenceTransitionStatus")) {
-            when (mGeoFencePref.getInt("TriggeredGeofenceTransitionStatus", -1)) {
+            mGeofenceTransitionState = mGeoFencePref.getInt("TriggeredGeofenceTransitionStatus", -1)
+            when (mGeofenceTransitionState) {
                 Geofence.GEOFENCE_TRANSITION_ENTER -> {
                     Toast.makeText(this, "GEOFENCE_TRANSITION_ENTER", Toast.LENGTH_LONG).show()
                 }
@@ -91,16 +189,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
 
-        // Add a marker in Sydney and move the camera
-        //val sydney = LatLng(-34.0, 151.0)
-        //mMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
-        //mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
-
         val riseCafe = LatLng(RISE_CAFE.lat, RISE_CAFE.lng)
+        mMap.addMarker(MarkerOptions().position(riseCafe).icon(mBlueMarkerDescriptor))
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(riseCafe, ZOOM_RADIUS))
-
         enableUserLocation()
-
         mMap.setOnMapLongClickListener(this)
     }
 
@@ -108,7 +200,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     private fun enableUserLocation() {
         if (PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(this,
                 android.Manifest.permission.ACCESS_FINE_LOCATION)) {
-            mMap.isMyLocationEnabled = true
         } else {
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     android.Manifest.permission.ACCESS_FINE_LOCATION)) {
@@ -153,7 +244,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     }
 
     override fun onMapLongClick(latLng: LatLng?) {
-        if (Build.VERSION.SDK_INT >= 29) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(this,
                     android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
                 handleMapLongClick(latLng)
@@ -176,7 +267,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
     private fun handleMapLongClick(latLng: LatLng?) {
         mMap.clear()
-        //mMap.addMarker(latLng?.let { MarkerOptions().position(it) })
+        //mMap.addMarker(MarkerOptions().position(LatLng(RISE_CAFE.lat, RISE_CAFE.lng)).icon(markerDescriptor))
         addCircle(latLng)
         if (latLng != null) {
             addGeofence(latLng)
@@ -204,10 +295,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     private fun addCircle(latLng: LatLng?) {
         val circleOptions: CircleOptions =
             CircleOptions().center(latLng).radius(GEOFENCE_RADIUS.toDouble())
-                .strokeColor(Color.GREEN).fillColor(Color.argb(64, 0, 255, 0))
+                .strokeColor(accuracyStrokeColor).fillColor(accuracyFillColor)
                 .strokeWidth(4.0f)
         mMap.addCircle(circleOptions)
 
     }
+
 }
 
