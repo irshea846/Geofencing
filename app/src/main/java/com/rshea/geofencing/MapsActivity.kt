@@ -40,12 +40,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     private var permissionDenied = false
     private lateinit var locationRequest: LocationRequest
 
-    private var markerDescriptor: BitmapDescriptor? = null
-    private val accuracyStrokeColor = Color.argb(255, 130, 182, 228)
-    private val accuracyFillColor = Color.argb(100, 130, 182, 228)
+    private val strokeColor = Color.argb(255, 130, 182, 228)
+    private val fillColor = Color.argb(100, 130, 182, 228)
 
     private var positionMarker: Marker? = null
-    private var accuracyCircle: Circle? = null
 
     companion object {
         private const val TAG = "MapsActivity"
@@ -75,7 +73,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         mGoogleApiClient = GoogleApiClient.Builder(this)
             .addApi(LocationServices.API)
             .addConnectionCallbacks(this)
-            .addOnConnectionFailedListener(this).build();
+            .addOnConnectionFailedListener(this).build()
 
         mBlueMarkerDescriptor =
             BitmapDescriptorFactory.fromBitmap(getDrawable(R.drawable.ic_blue)!!.toBitmap(40, 60))
@@ -129,40 +127,17 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     }
 
     override fun onConnectionSuspended(p0: Int) {
-        TODO("Not yet implemented")
     }
 
     override fun onConnectionFailed(p0: ConnectionResult) {
-        TODO("Not yet implemented")
     }
 
     override fun onLocationChanged(location: Location) {
-        val latitude: Double = location.latitude
-        val longitude: Double = location.longitude
-        val accuracy: Float = location.accuracy
-        positionMarker?.remove()
-        val positionMarkerOptions = MarkerOptions()
-            .position(LatLng(latitude, longitude))
-            .anchor(0.5f, 0.5f)
-        if (mGeofenceTransitionState == Geofence.GEOFENCE_TRANSITION_EXIT) {
-            positionMarkerOptions.icon(mBlueMarkerDescriptor)
-        } else {
-            positionMarkerOptions.icon(mGreenMarkerDescriptor)
-        }
-        positionMarker = mMap.addMarker(positionMarkerOptions)
-//        accuracyCircle?.remove()
-//        val accuracyCircleOptions = CircleOptions()
-//            .center(LatLng(latitude, longitude))
-//            .radius(accuracy.toDouble())
-//            .fillColor(accuracyFillColor)
-//            .strokeColor(accuracyStrokeColor)
-//            .strokeWidth(2.0f)
-//        accuracyCircle = mMap.addCircle(accuracyCircleOptions)
     }
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         if (key.equals("TriggeredGeofenceTransitionStatus")) {
-            mGeofenceTransitionState = mGeoFencePref.getInt("TriggeredGeofenceTransitionStatus", -1)
+            mGeofenceTransitionState = mGeoFencePref.getInt("TriggeredGeofenceTransitionStatus", Geofence.GEOFENCE_TRANSITION_EXIT)
             when (mGeofenceTransitionState) {
                 Geofence.GEOFENCE_TRANSITION_ENTER -> {
                     Toast.makeText(this, "GEOFENCE_TRANSITION_ENTER", Toast.LENGTH_LONG).show()
@@ -187,20 +162,18 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
      * installed Google Play services and returned to the app.
      */
     override fun onMapReady(googleMap: GoogleMap) {
-        mMap = googleMap
-
         val riseCafe = LatLng(RISE_CAFE.lat, RISE_CAFE.lng)
+        mMap = googleMap
         mMap.addMarker(MarkerOptions().position(riseCafe).icon(mBlueMarkerDescriptor))
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(riseCafe, ZOOM_RADIUS))
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(riseCafe, ZOOM_RADIUS))
         enableUserLocation()
         mMap.setOnMapLongClickListener(this)
     }
 
     @SuppressLint("MissingPermission")
     private fun enableUserLocation() {
-        if (PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(this,
+        if (PackageManager.PERMISSION_GRANTED != ContextCompat.checkSelfPermission(this,
                 android.Manifest.permission.ACCESS_FINE_LOCATION)) {
-        } else {
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     android.Manifest.permission.ACCESS_FINE_LOCATION)) {
                 ActivityCompat.requestPermissions(this,
@@ -235,8 +208,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
                 grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this, "ACCESS_BACKGROUND_LOCATION Granted", Toast.LENGTH_LONG).show()
             } else {
-                // Permission was denied. Display an error message
-                // Display the missing permission error dialog when the fragments resume.
                 Toast.makeText(this, "ACCESS_BACKGROUND_LOCATION Denied", Toast.LENGTH_LONG).show()
             }
         }
@@ -295,11 +266,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     private fun addCircle(latLng: LatLng?) {
         val circleOptions: CircleOptions =
             CircleOptions().center(latLng).radius(GEOFENCE_RADIUS.toDouble())
-                .strokeColor(accuracyStrokeColor).fillColor(accuracyFillColor)
+                .strokeColor(strokeColor).fillColor(fillColor)
                 .strokeWidth(4.0f)
         mMap.addCircle(circleOptions)
 
     }
-
 }
 

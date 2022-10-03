@@ -1,7 +1,6 @@
 package com.rshea.geofencing
 
 import android.app.PendingIntent
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
@@ -14,7 +13,6 @@ import com.google.android.gms.maps.model.LatLng
 
 class GeofenceHelper(ctx: Context) : ContextWrapper(ctx) {
     private var pendingIntent: PendingIntent? = null
-    private val context: Context = ctx
 
     companion object {
         private const val REQUEST_CODE = 200
@@ -43,7 +41,7 @@ class GeofenceHelper(ctx: Context) : ContextWrapper(ctx) {
         // addGeofences() and removeGeofences().
         var flag = PendingIntent.FLAG_UPDATE_CURRENT
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            flag = PendingIntent.FLAG_IMMUTABLE
+            flag = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         }
         pendingIntent = PendingIntent.getBroadcast(this, REQUEST_CODE, intent, flag)
         return pendingIntent as PendingIntent
