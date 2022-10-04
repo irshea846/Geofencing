@@ -36,12 +36,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     private lateinit var mBlueMarkerDescriptor: BitmapDescriptor
     private lateinit var mGreenMarkerDescriptor: BitmapDescriptor
     private var mGeofenceTransitionState: Int = Geofence.GEOFENCE_TRANSITION_EXIT
-    private lateinit var binding: ActivityMapsBinding
+    private lateinit var mActivityMapsBinding: ActivityMapsBinding
     private var permissionDenied = false
     private lateinit var locationRequest: LocationRequest
-
-    private val strokeColor = Color.argb(255, 130, 182, 228)
-    private val fillColor = Color.argb(100, 130, 182, 228)
 
     private var positionMarker: Marker? = null
 
@@ -63,8 +60,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        binding = ActivityMapsBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        mActivityMapsBinding = ActivityMapsBinding.inflate(layoutInflater)
+        setContentView(mActivityMapsBinding.root)
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         val mapFragment = supportFragmentManager
@@ -113,11 +110,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
                         val positionMarkerOptions = MarkerOptions()
                             .position(LatLng(latitude, longitude))
                             .anchor(0.5f, 0.5f)
-                        if (mGeofenceTransitionState == Geofence.GEOFENCE_TRANSITION_EXIT) {
-                            positionMarkerOptions.icon(mBlueMarkerDescriptor)
-                        } else {
-                            positionMarkerOptions.icon(mGreenMarkerDescriptor)
-                        }
+                            .icon( if (mGeofenceTransitionState == Geofence.GEOFENCE_TRANSITION_EXIT) {
+                                mBlueMarkerDescriptor
+                            } else {
+                                mGreenMarkerDescriptor
+                            })
                         positionMarker = mMap.addMarker(positionMarkerOptions)
                     }
                 }
@@ -238,9 +235,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
     private fun handleMapLongClick(latLng: LatLng?) {
         mMap.clear()
-        //mMap.addMarker(MarkerOptions().position(LatLng(RISE_CAFE.lat, RISE_CAFE.lng)).icon(markerDescriptor))
-        addCircle(latLng)
         if (latLng != null) {
+            addCircle(latLng)
             addGeofence(latLng)
         }
     }
@@ -266,7 +262,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     private fun addCircle(latLng: LatLng?) {
         val circleOptions: CircleOptions =
             CircleOptions().center(latLng).radius(GEOFENCE_RADIUS.toDouble())
-                .strokeColor(strokeColor).fillColor(fillColor)
+                .strokeColor(resources.getColor(R.color.geofence_stroke_color, null))
+                .fillColor(resources.getColor(R.color.geofence_fill_color, null))
                 .strokeWidth(4.0f)
         mMap.addCircle(circleOptions)
 
