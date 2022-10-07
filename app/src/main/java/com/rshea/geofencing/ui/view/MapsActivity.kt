@@ -217,7 +217,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
     }
 
-    override fun onMapLongClick(latLng: LatLng?) {
+    override fun onMapLongClick(latLng: LatLng) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(this,
                     android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
@@ -268,7 +268,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         }
     }
 
-    private fun addCircle(latLng: LatLng?) {
+    private fun addCircle(latLng: LatLng) {
         val circleOptions: CircleOptions =
             CircleOptions().center(latLng).radius(GEOFENCE_RADIUS.toDouble())
                 .strokeColor(resources.getColor(R.color.geofence_stroke_color, null))
