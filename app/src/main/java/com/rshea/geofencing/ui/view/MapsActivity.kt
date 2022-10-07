@@ -1,9 +1,8 @@
-package com.rshea.geofencing
+package com.rshea.geofencing.ui.view
 
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
@@ -22,6 +21,8 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
+import com.rshea.geofencing.GeofenceHelper
+import com.rshea.geofencing.R
 import com.rshea.geofencing.databinding.ActivityMapsBinding
 
 
@@ -99,7 +100,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         locationRequest = LocationRequest.create()
         locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         locationRequest.interval = 1000
-        LocationServices.getFusedLocationProviderClient(this).requestLocationUpdates(
+        val fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
+        fusedLocationProviderClient.requestLocationUpdates(
             locationRequest,
             object: LocationCallback() {
                 override fun onLocationResult(locationResult: LocationResult) {
@@ -120,7 +122,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
                 }
             },
             Looper.getMainLooper()
-        )
+        ).addOnFailureListener {
+            //in case of exception, close the Flow
+        }
     }
 
     override fun onConnectionSuspended(p0: Int) {
@@ -175,11 +179,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
                     android.Manifest.permission.ACCESS_FINE_LOCATION)) {
                 ActivityCompat.requestPermissions(this,
                     arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                    LOCATION_PERMISSION_REQUEST_CODE)
+                    LOCATION_PERMISSION_REQUEST_CODE
+                )
             } else {
                 ActivityCompat.requestPermissions(this,
                     arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                    LOCATION_PERMISSION_REQUEST_CODE)
+                    LOCATION_PERMISSION_REQUEST_CODE
+                )
             }
         }
     }
@@ -221,11 +227,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
                         android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
                     ActivityCompat.requestPermissions(this,
                         arrayOf(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION),
-                        BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE)
+                        BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
+                    )
                 } else {
                     ActivityCompat.requestPermissions(this,
                         arrayOf(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION),
-                        BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE)
+                        BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
+                    )
                 }
             }
         } else {
@@ -243,7 +251,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
     @SuppressLint("MissingPermission")
     private fun addGeofence(latLng: LatLng) {
-        val geofence = mGeofenceHelper.getGeofence(GEOFENCE_ID, latLng, GEOFENCE_RADIUS,
+        val geofence = mGeofenceHelper.getGeofence(
+            GEOFENCE_ID, latLng, GEOFENCE_RADIUS,
             Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL
                     or Geofence.GEOFENCE_TRANSITION_EXIT)
         val geofenceRequest = mGeofenceHelper.geofencingRequest(geofence)
