@@ -2,7 +2,6 @@ package com.rshea.geofencing.ui.view
 
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
@@ -10,8 +9,6 @@ import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
@@ -24,10 +21,15 @@ import com.google.android.gms.maps.model.*
 import com.rshea.geofencing.GeofenceHelper
 import com.rshea.geofencing.R
 import com.rshea.geofencing.databinding.ActivityMapsBinding
+import com.rshea.geofencing.util.Constants.BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
+import com.rshea.geofencing.util.Constants.LOCATION_PERMISSION_REQUEST_CODE
+import com.rshea.geofencing.util.Permissions
+import com.vmadalin.easypermissions.EasyPermissions
+import com.vmadalin.easypermissions.dialogs.SettingsDialog
 
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLongClickListener, GoogleApiClient.ConnectionCallbacks,
-    GoogleApiClient.OnConnectionFailedListener, LocationListener, SharedPreferences.OnSharedPreferenceChangeListener {
+    GoogleApiClient.OnConnectionFailedListener, LocationListener, SharedPreferences.OnSharedPreferenceChangeListener, EasyPermissions.PermissionCallbacks {
 
     private lateinit var mMap: GoogleMap
     private lateinit var mGeofencingClient: GeofencingClient
@@ -46,8 +48,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     companion object {
         private const val TAG = "MapsActivity"
         private const val GEOFENCE_ADDED = "Geofence added successfully!!!"
-        private const val LOCATION_PERMISSION_REQUEST_CODE = 1
-        private const val BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE = 2
         private const val GEOFENCE_RADIUS = 100.0f
         private const val ZOOM_RADIUS = 16.0f
         private val RISE_CAFE = object {
@@ -173,20 +173,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
     @SuppressLint("MissingPermission")
     private fun enableUserLocation() {
-        if (PackageManager.PERMISSION_GRANTED != ContextCompat.checkSelfPermission(this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION)) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    android.Manifest.permission.ACCESS_FINE_LOCATION)) {
-                ActivityCompat.requestPermissions(this,
-                    arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                    LOCATION_PERMISSION_REQUEST_CODE
-                )
-            } else {
-                ActivityCompat.requestPermissions(this,
-                    arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
-                    LOCATION_PERMISSION_REQUEST_CODE
-                )
-            }
+        if (Permissions.hasLocationPermission(this)) {
+            //TODO: check first launch
+        } else {
+            Permissions.requestLocationPermission(this)
         }
     }
 
@@ -196,45 +186,41 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (permissions.isNotEmpty() &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                enableUserLocation()
-            } else {
-                // Permission was denied. Display an error message
-                // Display the missing permission error dialog when the fragments resume.
-                permissionDenied = true
-            }
-        }
-        if (requestCode == BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE) {
-            if (permissions.isNotEmpty() &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "ACCESS_BACKGROUND_LOCATION Granted", Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(this, "ACCESS_BACKGROUND_LOCATION Denied", Toast.LENGTH_LONG).show()
-            }
-        }
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
+    }
 
+    override fun onPermissionsDenied(requestCode: Int, perms: List<String>) {
+        if (EasyPermissions.somePermissionPermanentlyDenied(this, perms)) {
+            SettingsDialog.Builder(this).build().show()
+        } else {
+            when (requestCode) {
+                LOCATION_PERMISSION_REQUEST_CODE -> Permissions.requestLocationPermission(this)
+                BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    Permissions.requestBackgroundLocationPermission(this)
+                }
+                else -> TODO()
+            }
+        }
+    }
+
+    override fun onPermissionsGranted(requestCode: Int, perms: List<String>) {
+        Toast.makeText(
+            this,
+            when (requestCode) {
+                LOCATION_PERMISSION_REQUEST_CODE -> "ACCESS_LOCATION Granted"
+                BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) "ACCESS_BACKGROUND_LOCATION Granted" else TODO()
+                else -> "No Access Granted"
+            },
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     override fun onMapLongClick(latLng: LatLng) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(this,
-                    android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
+            if (Permissions.hasBackgroundLocationRequest(this)) {
                 handleMapLongClick(latLng)
-            } else {
-                if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                        android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)) {
-                    ActivityCompat.requestPermissions(this,
-                        arrayOf(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION),
-                        BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
-                    )
-                } else {
-                    ActivityCompat.requestPermissions(this,
-                        arrayOf(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION),
-                        BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
-                    )
-                }
+           } else {
+                Permissions.requestBackgroundLocationPermission(this)
             }
         } else {
             handleMapLongClick(latLng)
