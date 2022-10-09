@@ -1,4 +1,4 @@
-package com.rshea.geofencing
+package com.rshea.geofencing.domain.usecase
 
 import android.app.PendingIntent
 import android.content.Context
@@ -10,6 +10,7 @@ import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofenceStatusCodes
 import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.maps.model.LatLng
+import com.rshea.geofencing.broadcastreceiver.GeofenceBroadcastReceiver
 
 class GeofenceHelper(ctx: Context) : ContextWrapper(ctx) {
     private var pendingIntent: PendingIntent? = null

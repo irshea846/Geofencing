@@ -1,6 +1,7 @@
 package com.rshea.geofencing.ui.view
 
 import android.annotation.SuppressLint
+import android.app.Application
 import android.content.SharedPreferences
 import android.location.Location
 import android.os.Build
@@ -18,7 +19,7 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
-import com.rshea.geofencing.GeofenceHelper
+import com.rshea.geofencing.domain.usecase.GeofenceHelper
 import com.rshea.geofencing.R
 import com.rshea.geofencing.databinding.ActivityMapsBinding
 import com.rshea.geofencing.util.Constants.BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
@@ -26,8 +27,10 @@ import com.rshea.geofencing.util.Constants.LOCATION_PERMISSION_REQUEST_CODE
 import com.rshea.geofencing.util.Permissions
 import com.vmadalin.easypermissions.EasyPermissions
 import com.vmadalin.easypermissions.dialogs.SettingsDialog
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
-
+@AndroidEntryPoint
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLongClickListener, GoogleApiClient.ConnectionCallbacks,
     GoogleApiClient.OnConnectionFailedListener, LocationListener, SharedPreferences.OnSharedPreferenceChangeListener, EasyPermissions.PermissionCallbacks {
 
@@ -57,9 +60,17 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         private const val GEOFENCE_ID = "RISE_CAFE"
     }
 
+    @Inject
+    lateinit var randomString: String
+    @Inject
+    lateinit var app: Application
+
     @SuppressLint("UseCompatLoadingForDrawables")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        Log.d(TAG, "randomString: $randomString")
+        Log.d(TAG, "app: $app")
 
         mActivityMapsBinding = ActivityMapsBinding.inflate(layoutInflater)
         setContentView(mActivityMapsBinding.root)
