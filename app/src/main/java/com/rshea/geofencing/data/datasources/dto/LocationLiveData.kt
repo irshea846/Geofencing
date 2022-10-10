@@ -2,18 +2,20 @@ package com.rshea.geofencing.data.datasources.dto
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
 import android.location.Location
 import androidx.lifecycle.LiveData
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.*
+import com.rshea.geofencing.util.Constants
+import com.rshea.geofencing.util.Constants.LOCATION_GEOFENCE_TRANSITION_ID
 import com.rshea.geofencing.util.Constants.LOCATION_REQUEST_INTERVAL
 
 class LocationLiveData(
     application: Application
 ): LiveData<LocationEntity>() {
 
+    private var transitionStatePref: SharedPreferences? = application.getSharedPreferences(LOCATION_GEOFENCE_TRANSITION_ID, Context.MODE_PRIVATE)
     private val fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(application)
 
     override fun onInactive() {
@@ -24,6 +26,7 @@ class LocationLiveData(
     @SuppressLint("MissingPermission")
     override fun onActive() {
         super.onActive()
+        transitionStatePref?.edit()?.putInt(LOCATION_GEOFENCE_TRANSITION_ID, Geofence.GEOFENCE_TRANSITION_EXIT)?.apply()
         fusedLocationProviderClient.lastLocation.addOnSuccessListener {
             location: Location -> location.also {
                 setLocationLiveData(it)
@@ -56,7 +59,10 @@ class LocationLiveData(
     }
 
     private fun setLocationLiveData(location: Location) {
-        value = LocationEntity(location.latitude.toString(), location.longitude.toString())
+        value = transitionStatePref?.let {
+            LocationEntity(location.latitude.toString(), location.longitude.toString(),
+                it.getInt(LOCATION_GEOFENCE_TRANSITION_ID, Geofence.GEOFENCE_TRANSITION_EXIT))
+        }
     }
 
     companion object {

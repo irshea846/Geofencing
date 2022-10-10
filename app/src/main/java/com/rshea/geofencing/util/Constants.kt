@@ -3,17 +3,15 @@ package com.rshea.geofencing.util
 object Constants {
 
     const val LOCATION_ENABLE_ALERT = "Please enable Location Settings."
+    const val CAMERA_ZOOM_RADIUS = 16.0f
 
     // PERMISSION REQUEST CODE
     const val LOCATION_PERMISSION_REQUEST_CODE = 1
     const val BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE = 2
 
-    // SHARED PREFERENCE
-    const val PREFERENCE_NAME = "geofence_preference"
-    const val PREFERENCE_FIRST_LAUNCH = "firstLaunch"
-
     // Location
     const val LOCATION_REQUEST_INTERVAL = 1000L
+    const val LOCATION_GEOFENCE_TRANSITION_ID = "location_geofence_transition_id"
 
     // Geofence
     const val GEOFENCE_PENDING_INTENT_REQUEST_CODE = 200

@@ -27,9 +27,11 @@ import com.rshea.geofencing.databinding.ActivityMapsBinding
 import com.rshea.geofencing.ui.viewmodel.LocationViewModel
 import com.rshea.geofencing.ui.viewmodel.SharedViewModel
 import com.rshea.geofencing.util.Constants.BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
+import com.rshea.geofencing.util.Constants.CAMERA_ZOOM_RADIUS
 import com.rshea.geofencing.util.Constants.GEOFENCE_CIRCLE_STROKE_WIDTH
 import com.rshea.geofencing.util.Constants.GEOFENCE_RADIUS
 import com.rshea.geofencing.util.Constants.LOCATION_ENABLE_ALERT
+import com.rshea.geofencing.util.Constants.LOCATION_GEOFENCE_TRANSITION_ID
 import com.rshea.geofencing.util.Constants.LOCATION_PERMISSION_REQUEST_CODE
 import com.rshea.geofencing.util.Permissions
 import com.rshea.geofencing.util.Permissions.hasBackgroundLocationRequest
@@ -44,19 +46,16 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLongClickListener, GoogleApiClient.ConnectionCallbacks,
-    GoogleApiClient.OnConnectionFailedListener, LocationListener, SharedPreferences.OnSharedPreferenceChangeListener, EasyPermissions.PermissionCallbacks {
+    GoogleApiClient.OnConnectionFailedListener, LocationListener, EasyPermissions.PermissionCallbacks {
 
     private lateinit var mMap: GoogleMap
-    private lateinit var mGeoFencePref: SharedPreferences
     private lateinit var mGoogleApiClient: GoogleApiClient
     private lateinit var mBlueMarkerDescriptor: BitmapDescriptor
     private lateinit var mGreenMarkerDescriptor: BitmapDescriptor
-    private var mGeofenceTransitionState: Int = Geofence.GEOFENCE_TRANSITION_EXIT
     private lateinit var mActivityMapsBinding: ActivityMapsBinding
 
     companion object {
         private const val TAG = "MapsActivity"
-        private const val ZOOM_RADIUS = 16.0f
         private val RISE_CAFE = object {
             val lat = 37.7737
             val lng = -122.4662
@@ -99,8 +98,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         mGreenMarkerDescriptor =
             BitmapDescriptorFactory.fromBitmap(getDrawable(R.drawable.ic_green)!!.toBitmap(40, 60))
 
-        mGeoFencePref = getSharedPreferences("TriggeredGeofenceTransitionStatus", MODE_PRIVATE)
-        mGeoFencePref.registerOnSharedPreferenceChangeListener(this)
     }
 
     override fun onStart() {
@@ -126,23 +123,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     override fun onLocationChanged(location: Location) {
     }
 
-    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
-        if (key.equals("TriggeredGeofenceTransitionStatus")) {
-            mGeofenceTransitionState = mGeoFencePref.getInt("TriggeredGeofenceTransitionStatus", Geofence.GEOFENCE_TRANSITION_EXIT)
-            when (mGeofenceTransitionState) {
-                Geofence.GEOFENCE_TRANSITION_ENTER -> {
-                    Toast.makeText(this, "GEOFENCE_TRANSITION_ENTER", Toast.LENGTH_LONG).show()
-                }
-                Geofence.GEOFENCE_TRANSITION_DWELL -> {
-                    Toast.makeText(this, "GEOFENCE_TRANSITION_DWELL", Toast.LENGTH_LONG).show()
-                }
-                Geofence.GEOFENCE_TRANSITION_EXIT -> {
-                    Toast.makeText(this, "GEOFENCE_TRANSITION_EXIT", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
-
     /**
      * Manipulates the map once available.
      * This callback is triggered when the map is ready to be used.
@@ -156,7 +136,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         val riseCafe = LatLng(RISE_CAFE.lat, RISE_CAFE.lng)
         mMap = googleMap
         mMap.addMarker(MarkerOptions().position(riseCafe).icon(mBlueMarkerDescriptor))
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(riseCafe, ZOOM_RADIUS))
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(riseCafe, CAMERA_ZOOM_RADIUS))
         enableUserLocation()
         mMap.setOnMapLongClickListener(this)
         observeDatabase()
@@ -211,12 +191,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         locationViewModel.getLocationLiveData().observe(this) {
             val latitude: Double = it.lat.toDouble()
             val longitude: Double = it.lng.toDouble()
+            val transitionState: Int = it.transitionState
             positionMarker?.remove()
             val positionMarkerOptions = MarkerOptions()
                 .position(LatLng(latitude, longitude))
                 .anchor(0.5f, 0.5f)
                 .icon(
-                    if (mGeofenceTransitionState == Geofence.GEOFENCE_TRANSITION_EXIT) {
+                    if (transitionState == Geofence.GEOFENCE_TRANSITION_EXIT) {
                         mBlueMarkerDescriptor
                     } else {
                         mGreenMarkerDescriptor
