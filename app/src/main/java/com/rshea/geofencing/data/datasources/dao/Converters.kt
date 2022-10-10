@@ -1,4 +1,4 @@
-package com.rshea.geofencing.data.datasources
+package com.rshea.geofencing.data.datasources.dao
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

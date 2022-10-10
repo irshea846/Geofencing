@@ -12,7 +12,7 @@ import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.maps.model.LatLng
 import com.rshea.geofencing.broadcastreceiver.GeofenceBroadcastReceiver
 
-class GeofenceHelper(ctx: Context) : ContextWrapper(ctx) {
+class GeofenceUseCase(ctx: Context) : ContextWrapper(ctx) {
     private var pendingIntent: PendingIntent? = null
 
     companion object {

@@ -6,14 +6,12 @@ import android.content.SharedPreferences
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
-import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.drawable.toBitmap
-import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
@@ -24,10 +22,14 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.rshea.geofencing.R
+import com.rshea.geofencing.data.datasources.dto.LocationLiveData
 import com.rshea.geofencing.databinding.ActivityMapsBinding
+import com.rshea.geofencing.ui.viewmodel.LocationViewModel
 import com.rshea.geofencing.ui.viewmodel.SharedViewModel
 import com.rshea.geofencing.util.Constants.BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
+import com.rshea.geofencing.util.Constants.GEOFENCE_CIRCLE_STROKE_WIDTH
 import com.rshea.geofencing.util.Constants.GEOFENCE_RADIUS
+import com.rshea.geofencing.util.Constants.LOCATION_ENABLE_ALERT
 import com.rshea.geofencing.util.Constants.LOCATION_PERMISSION_REQUEST_CODE
 import com.rshea.geofencing.util.Permissions
 import com.rshea.geofencing.util.Permissions.hasBackgroundLocationRequest
@@ -36,6 +38,7 @@ import com.rshea.geofencing.util.Permissions.requestLocationPermission
 import com.vmadalin.easypermissions.EasyPermissions
 import com.vmadalin.easypermissions.dialogs.SettingsDialog
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -50,9 +53,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     private lateinit var mGreenMarkerDescriptor: BitmapDescriptor
     private var mGeofenceTransitionState: Int = Geofence.GEOFENCE_TRANSITION_EXIT
     private lateinit var mActivityMapsBinding: ActivityMapsBinding
-    private lateinit var locationRequest: LocationRequest
-
-    private var positionMarker: Marker? = null
 
     companion object {
         private const val TAG = "MapsActivity"
@@ -65,6 +65,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
     // Need to add implementation "androidx.fragment:fragment-ktx:1.5.2"
     private val sharedViewModel: SharedViewModel by viewModels()
+    private val locationViewModel: LocationViewModel by viewModels()
+
+    private var positionMarker: Marker? = null
 
     @Inject
     lateinit var randomString: String
@@ -110,36 +113,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         mGoogleApiClient.disconnect()
     }
 
-    @SuppressLint("MissingPermission")
     override fun onConnected(bundle: Bundle?) {
-        locationRequest = LocationRequest.create()
-        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-        locationRequest.interval = 1000
-        val fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
-        fusedLocationProviderClient.requestLocationUpdates(
-            locationRequest,
-            object: LocationCallback() {
-                override fun onLocationResult(locationResult: LocationResult) {
-                    for (location in locationResult.locations) {
-                        val latitude: Double = location.latitude
-                        val longitude: Double = location.longitude
-                        positionMarker?.remove()
-                        val positionMarkerOptions = MarkerOptions()
-                            .position(LatLng(latitude, longitude))
-                            .anchor(0.5f, 0.5f)
-                            .icon( if (mGeofenceTransitionState == Geofence.GEOFENCE_TRANSITION_EXIT) {
-                                mBlueMarkerDescriptor
-                            } else {
-                                mGreenMarkerDescriptor
-                            })
-                        positionMarker = mMap.addMarker(positionMarkerOptions)
-                    }
-                }
-            },
-            Looper.getMainLooper()
-        ).addOnFailureListener {
-            //in case of exception, close the Flow
-        }
+        locationViewModel.getLocationRequest()
     }
 
     override fun onConnectionSuspended(p0: Int) {
@@ -190,7 +165,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     @SuppressLint("MissingPermission")
     private fun enableUserLocation() {
         if (Permissions.hasLocationPermission(this)) {
-            //TODO: check first launch
+            requestLocationUpdates()
         } else {
             requestLocationPermission(this)
         }
@@ -220,15 +195,35 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     }
 
     override fun onPermissionsGranted(requestCode: Int, perms: List<String>) {
-        Toast.makeText(
-            this,
-            when (requestCode) {
-                LOCATION_PERMISSION_REQUEST_CODE -> "ACCESS_LOCATION Granted"
-                BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) "ACCESS_BACKGROUND_LOCATION Granted" else TODO()
-                else -> "No Access Granted"
-            },
-            Toast.LENGTH_SHORT
-        ).show()
+        when (requestCode) {
+            LOCATION_PERMISSION_REQUEST_CODE -> requestLocationUpdates()
+            BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE -> {
+                Toast.makeText(
+                    this,
+                    "ACCESS_BACKGROUND_LOCATION Granted",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun requestLocationUpdates() {
+        locationViewModel.getLocationLiveData().observe(this) {
+            val latitude: Double = it.lat.toDouble()
+            val longitude: Double = it.lng.toDouble()
+            positionMarker?.remove()
+            val positionMarkerOptions = MarkerOptions()
+                .position(LatLng(latitude, longitude))
+                .anchor(0.5f, 0.5f)
+                .icon(
+                    if (mGeofenceTransitionState == Geofence.GEOFENCE_TRANSITION_EXIT) {
+                        mBlueMarkerDescriptor
+                    } else {
+                        mGreenMarkerDescriptor
+                    }
+                )
+            positionMarker = mMap.addMarker(positionMarkerOptions)
+        }
     }
 
     override fun onMapLongClick(latLng: LatLng) {
@@ -243,22 +238,21 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         }
     }
 
-    private fun setupGeofence(location: LatLng) {
+    private fun setupGeofence(latLng: LatLng) {
         lifecycleScope.launch {
             if (sharedViewModel.checkDeviceLocationSettings()) {
-                addCircle(location)
-                sharedViewModel.addGeofence(location)
+                mMap.clear()
+                addCircle(latLng)
+                sharedViewModel.startGeofence(latLng)
                 // TODO: zoomToGeofence(circle.center, circle.radius.toFloat())
 
-                //delay(2000)
-                //sharedViewModel.addGeofenceToDatabase(location)
-                //delay(2000)
-                //sharedViewModel.resetSharedValues()
+                delay(2000)
+                sharedViewModel.addGeofenceToDatabase(latLng)
 
             } else {
                 Toast.makeText(
                     app,
-                    "Please enable Location Settings.",
+                    LOCATION_ENABLE_ALERT,
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -266,7 +260,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     }
 
     private fun observeDatabase() {
-//        sharedViewModel.readGeofences.observe(viewLifecycleOwner) { geofenceEntity ->
+//        sharedViewModel.readGeofence.observe(viewLifecycleOwner) { geofenceEntity ->
 //            mMap.clear()
 //            geofenceEntity.forEach { geofence ->
 //                addCircle(LatLng(geofence.latitude, geofence.longitude))
@@ -274,13 +268,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 //        }
     }
 
-
     private fun addCircle(latLng: LatLng) {
         val circleOptions: CircleOptions =
             CircleOptions().center(latLng).radius(GEOFENCE_RADIUS.toDouble())
                 .strokeColor(resources.getColor(R.color.geofence_stroke_color, null))
                 .fillColor(resources.getColor(R.color.geofence_fill_color, null))
-                .strokeWidth(4.0f)
+                .strokeWidth(GEOFENCE_CIRCLE_STROKE_WIDTH)
         mMap.addCircle(circleOptions)
 
     }

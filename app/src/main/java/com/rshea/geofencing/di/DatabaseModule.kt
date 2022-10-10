@@ -2,8 +2,8 @@ package com.rshea.geofencing.di
 
 import android.content.Context
 import androidx.room.Room
-import com.rshea.geofencing.data.datasources.GeofenceDatabase
-import com.rshea.geofencing.util.Constants.DATABASE_NAME
+import com.rshea.geofencing.data.datasources.dao.GeofenceDatabase
+import com.rshea.geofencing.util.Constants.GEOFENCE_DATABASE_NAME
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,7 +22,7 @@ class DatabaseModule {
     ) = Room.databaseBuilder(
         app,
         GeofenceDatabase::class.java,
-        DATABASE_NAME
+        GEOFENCE_DATABASE_NAME
     ).build()
 
     @Singleton
