@@ -9,8 +9,12 @@ import android.os.Bundle
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.drawable.toBitmap
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.*
@@ -19,15 +23,20 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
-import com.rshea.geofencing.domain.usecase.GeofenceHelper
 import com.rshea.geofencing.R
 import com.rshea.geofencing.databinding.ActivityMapsBinding
+import com.rshea.geofencing.ui.viewmodel.SharedViewModel
 import com.rshea.geofencing.util.Constants.BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
+import com.rshea.geofencing.util.Constants.GEOFENCE_RADIUS
 import com.rshea.geofencing.util.Constants.LOCATION_PERMISSION_REQUEST_CODE
 import com.rshea.geofencing.util.Permissions
+import com.rshea.geofencing.util.Permissions.hasBackgroundLocationRequest
+import com.rshea.geofencing.util.Permissions.requestBackgroundLocationPermission
+import com.rshea.geofencing.util.Permissions.requestLocationPermission
 import com.vmadalin.easypermissions.EasyPermissions
 import com.vmadalin.easypermissions.dialogs.SettingsDialog
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -35,30 +44,27 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     GoogleApiClient.OnConnectionFailedListener, LocationListener, SharedPreferences.OnSharedPreferenceChangeListener, EasyPermissions.PermissionCallbacks {
 
     private lateinit var mMap: GoogleMap
-    private lateinit var mGeofencingClient: GeofencingClient
     private lateinit var mGeoFencePref: SharedPreferences
-    private lateinit var mGeofenceHelper: GeofenceHelper
     private lateinit var mGoogleApiClient: GoogleApiClient
     private lateinit var mBlueMarkerDescriptor: BitmapDescriptor
     private lateinit var mGreenMarkerDescriptor: BitmapDescriptor
     private var mGeofenceTransitionState: Int = Geofence.GEOFENCE_TRANSITION_EXIT
     private lateinit var mActivityMapsBinding: ActivityMapsBinding
-    private var permissionDenied = false
     private lateinit var locationRequest: LocationRequest
 
     private var positionMarker: Marker? = null
 
     companion object {
         private const val TAG = "MapsActivity"
-        private const val GEOFENCE_ADDED = "Geofence added successfully!!!"
-        private const val GEOFENCE_RADIUS = 100.0f
         private const val ZOOM_RADIUS = 16.0f
         private val RISE_CAFE = object {
             val lat = 37.7737
             val lng = -122.4662
         }
-        private const val GEOFENCE_ID = "RISE_CAFE"
     }
+
+    // Need to add implementation "androidx.fragment:fragment-ktx:1.5.2"
+    private val sharedViewModel: SharedViewModel by viewModels()
 
     @Inject
     lateinit var randomString: String
@@ -79,6 +85,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
         mGoogleApiClient = GoogleApiClient.Builder(this)
             .addApi(LocationServices.API)
             .addConnectionCallbacks(this)
@@ -88,9 +95,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
             BitmapDescriptorFactory.fromBitmap(getDrawable(R.drawable.ic_blue)!!.toBitmap(40, 60))
         mGreenMarkerDescriptor =
             BitmapDescriptorFactory.fromBitmap(getDrawable(R.drawable.ic_green)!!.toBitmap(40, 60))
-
-        mGeofencingClient = LocationServices.getGeofencingClient(this)
-        mGeofenceHelper = GeofenceHelper(this)
 
         mGeoFencePref = getSharedPreferences("TriggeredGeofenceTransitionStatus", MODE_PRIVATE)
         mGeoFencePref.registerOnSharedPreferenceChangeListener(this)
@@ -180,6 +184,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(riseCafe, ZOOM_RADIUS))
         enableUserLocation()
         mMap.setOnMapLongClickListener(this)
+        observeDatabase()
     }
 
     @SuppressLint("MissingPermission")
@@ -187,7 +192,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         if (Permissions.hasLocationPermission(this)) {
             //TODO: check first launch
         } else {
-            Permissions.requestLocationPermission(this)
+            requestLocationPermission(this)
         }
     }
 
@@ -205,9 +210,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
             SettingsDialog.Builder(this).build().show()
         } else {
             when (requestCode) {
-                LOCATION_PERMISSION_REQUEST_CODE -> Permissions.requestLocationPermission(this)
+                LOCATION_PERMISSION_REQUEST_CODE -> requestLocationPermission(this)
                 BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    Permissions.requestBackgroundLocationPermission(this)
+                    requestBackgroundLocationPermission(this)
                 }
                 else -> TODO()
             }
@@ -228,42 +233,47 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
     override fun onMapLongClick(latLng: LatLng) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (Permissions.hasBackgroundLocationRequest(this)) {
-                handleMapLongClick(latLng)
+            if (hasBackgroundLocationRequest(this)) {
+                setupGeofence(latLng)
            } else {
-                Permissions.requestBackgroundLocationPermission(this)
+                requestBackgroundLocationPermission(this)
             }
         } else {
-            handleMapLongClick(latLng)
+            setupGeofence(latLng)
         }
     }
 
-    private fun handleMapLongClick(latLng: LatLng?) {
-        mMap.clear()
-        if (latLng != null) {
-            addCircle(latLng)
-            addGeofence(latLng)
+    private fun setupGeofence(location: LatLng) {
+        lifecycleScope.launch {
+            if (sharedViewModel.checkDeviceLocationSettings()) {
+                addCircle(location)
+                sharedViewModel.addGeofence(location)
+                // TODO: zoomToGeofence(circle.center, circle.radius.toFloat())
+
+                //delay(2000)
+                //sharedViewModel.addGeofenceToDatabase(location)
+                //delay(2000)
+                //sharedViewModel.resetSharedValues()
+
+            } else {
+                Toast.makeText(
+                    app,
+                    "Please enable Location Settings.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
-    @SuppressLint("MissingPermission")
-    private fun addGeofence(latLng: LatLng) {
-        val geofence = mGeofenceHelper.getGeofence(
-            GEOFENCE_ID, latLng, GEOFENCE_RADIUS,
-            Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL
-                    or Geofence.GEOFENCE_TRANSITION_EXIT)
-        val geofenceRequest = mGeofenceHelper.geofencingRequest(geofence)
-        val pendingIntent = mGeofenceHelper.geofencePendingIntent()
-        mGeofencingClient.addGeofences(geofenceRequest, pendingIntent).run {
-            addOnSuccessListener {
-                Log.i(TAG, GEOFENCE_ADDED)
-            }
-            addOnFailureListener {
-                val error = mGeofenceHelper.getErrorMessage(it)
-                Log.i(TAG, error)
-            }
-        }
+    private fun observeDatabase() {
+//        sharedViewModel.readGeofences.observe(viewLifecycleOwner) { geofenceEntity ->
+//            mMap.clear()
+//            geofenceEntity.forEach { geofence ->
+//                addCircle(LatLng(geofence.latitude, geofence.longitude))
+//            }
+//        }
     }
+
 
     private fun addCircle(latLng: LatLng) {
         val circleOptions: CircleOptions =
