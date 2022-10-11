@@ -18,6 +18,6 @@ class GeofenceEntity(
     val radius: Float
 ): Parcelable {
     @IgnoredOnParcel
-    @PrimaryKey(autoGenerate = true)
+    @PrimaryKey //(autoGenerate = true)
     var id: Int = 0
 }

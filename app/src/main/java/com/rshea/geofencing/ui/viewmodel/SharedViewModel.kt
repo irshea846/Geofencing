@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
 import android.os.Build
-import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -19,7 +18,6 @@ import com.google.android.gms.maps.model.LatLng
 import com.rshea.geofencing.broadcastreceiver.GeofenceBroadcastReceiver
 import com.rshea.geofencing.data.datasources.dao.GeofenceEntity
 import com.rshea.geofencing.data.repository.GeofenceRepository
-import com.rshea.geofencing.ui.uistate.CurrentLocationUiState
 import com.rshea.geofencing.util.Constants.GEOFENCE_ADDED
 import com.rshea.geofencing.util.Constants.GEOFENCE_ID
 import com.rshea.geofencing.util.Constants.GEOFENCE_LOCATION_NAME
@@ -27,7 +25,6 @@ import com.rshea.geofencing.util.Constants.GEOFENCE_NAME
 import com.rshea.geofencing.util.Constants.GEOFENCE_RADIUS
 import com.rshea.geofencing.util.Constants.GEOFENCE_LOITERING_DELAY
 import com.rshea.geofencing.util.Constants.GEOFENCE_PENDING_INTENT_REQUEST_CODE
-import com.rshea.geofencing.util.Constants.LOCATION_REQUEST_INTERVAL
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,13 +49,12 @@ class SharedViewModel @Inject constructor(
     private var geofencingClient = LocationServices.getGeofencingClient(context)
     private var geofenceEntity: GeofenceEntity? = null
 
-    private val _uiState = MutableStateFlow(CurrentLocationUiState())
-    val uiState: StateFlow<CurrentLocationUiState> = _uiState.asStateFlow()
-
-    // fun readCurrentLocationUIState(): CurrentLocationUiState
+    fun removeOldGeofenceFromDatabase() {
+        geofenceEntity?.let { removeGeofence(it) }
+    }
 
     fun addGeofenceToDatabase(latLng: LatLng) {
-        geofenceEntity?.let { removeGeofence(it) }
+        //geofenceEntity?.let { removeGeofence(it) }
         geofenceEntity = GeofenceEntity(
             GEOFENCE_ID,
             GEOFENCE_NAME,

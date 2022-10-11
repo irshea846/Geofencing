@@ -223,13 +223,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         lifecycleScope.launch {
             if (sharedViewModel.checkDeviceLocationSettings()) {
                 mMap.clear()
-                addCircle(latLng)
+                sharedViewModel.removeOldGeofenceFromDatabase()
                 sharedViewModel.startGeofence(latLng)
                 // TODO: zoomToGeofence(circle.center, circle.radius.toFloat())
-
-                delay(2000)
                 sharedViewModel.addGeofenceToDatabase(latLng)
-
             } else {
                 Toast.makeText(
                     app,
@@ -241,12 +238,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     }
 
     private fun observeDatabase() {
-//        sharedViewModel.readGeofence.observe(viewLifecycleOwner) { geofenceEntity ->
-//            mMap.clear()
-//            geofenceEntity.forEach { geofence ->
-//                addCircle(LatLng(geofence.latitude, geofence.longitude))
-//            }
-//        }
+        sharedViewModel.readGeofence.observe(this) { geofenceEntity ->
+            mMap.clear()
+            geofenceEntity.forEach { geofence ->
+                addCircle(LatLng(geofence.latitude, geofence.longitude))
+            }
+        }
     }
 
     private fun addCircle(latLng: LatLng) {
@@ -259,4 +256,3 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
     }
 }
-
