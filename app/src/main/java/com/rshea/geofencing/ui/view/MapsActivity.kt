@@ -197,11 +197,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
                 .position(LatLng(latitude, longitude))
                 .anchor(0.5f, 0.5f)
                 .icon(
-                    if (transitionState == Geofence.GEOFENCE_TRANSITION_EXIT) {
-                        mBlueMarkerDescriptor
-                    } else {
+                    if (transitionState == Geofence.GEOFENCE_TRANSITION_EXIT)
+                        mBlueMarkerDescriptor else
                         mGreenMarkerDescriptor
-                    }
                 )
             positionMarker = mMap.addMarker(positionMarkerOptions)
         }
@@ -211,7 +209,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (hasBackgroundLocationRequest(this)) {
                 setupGeofence(latLng)
-           } else {
+            } else {
                 requestBackgroundLocationPermission(this)
             }
         } else {
@@ -222,11 +220,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     private fun setupGeofence(latLng: LatLng) {
         lifecycleScope.launch {
             if (sharedViewModel.checkDeviceLocationSettings()) {
+                sharedViewModel.stopGeofence()
                 mMap.clear()
-                sharedViewModel.removeOldGeofenceFromDatabase()
                 sharedViewModel.startGeofence(latLng)
                 // TODO: zoomToGeofence(circle.center, circle.radius.toFloat())
-                sharedViewModel.addGeofenceToDatabase(latLng)
             } else {
                 Toast.makeText(
                     app,

@@ -26,10 +26,8 @@ import com.rshea.geofencing.util.Constants.GEOFENCE_RADIUS
 import com.rshea.geofencing.util.Constants.GEOFENCE_LOITERING_DELAY
 import com.rshea.geofencing.util.Constants.GEOFENCE_PENDING_INTENT_REQUEST_CODE
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -49,12 +47,11 @@ class SharedViewModel @Inject constructor(
     private var geofencingClient = LocationServices.getGeofencingClient(context)
     private var geofenceEntity: GeofenceEntity? = null
 
-    fun removeOldGeofenceFromDatabase() {
+    private fun removeOldGeofenceFromDatabase() {
         geofenceEntity?.let { removeGeofence(it) }
     }
 
-    fun addGeofenceToDatabase(latLng: LatLng) {
-        //geofenceEntity?.let { removeGeofence(it) }
+    private fun addGeofenceToDatabase(latLng: LatLng) {
         geofenceEntity = GeofenceEntity(
             GEOFENCE_ID,
             GEOFENCE_NAME,
@@ -119,12 +116,27 @@ class SharedViewModel @Inject constructor(
         geofencingClient.addGeofences(geofenceRequest, pendingIntent).run {
             addOnSuccessListener {
                 Log.i(TAG, GEOFENCE_ADDED)
+                addGeofenceToDatabase(latLng)
             }
             addOnFailureListener {
                 val error = getErrorMessage(it)
                 Log.i(TAG, error)
             }
         }
+    }
+
+    suspend fun stopGeofence(): Boolean {
+        removeOldGeofenceFromDatabase()
+        val result = CompletableDeferred<Boolean>()
+        geofencingClient.removeGeofences(pendingIntent)
+            .addOnCompleteListener {
+                if (it.isSuccessful) {
+                    result.complete(true)
+                } else {
+                    result.complete(false)
+                }
+            }
+        return result.await()
     }
 
     private fun getErrorMessage(e: Exception): String {
