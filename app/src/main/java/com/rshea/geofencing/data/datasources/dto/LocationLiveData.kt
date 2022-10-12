@@ -7,7 +7,6 @@ import android.content.SharedPreferences
 import android.location.Location
 import androidx.lifecycle.LiveData
 import com.google.android.gms.location.*
-import com.rshea.geofencing.util.Constants
 import com.rshea.geofencing.util.Constants.LOCATION_GEOFENCE_TRANSITION_ID
 import com.rshea.geofencing.util.Constants.LOCATION_REQUEST_INTERVAL
 
