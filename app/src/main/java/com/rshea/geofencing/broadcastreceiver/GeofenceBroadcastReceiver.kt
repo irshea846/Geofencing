@@ -27,9 +27,17 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
             Log.e(TAG, "error: $errorMessage")
             return
         }
-
-        locGeoFencePref?.edit()?.putInt(LOCATION_GEOFENCE_TRANSITION_ID, geofencingEvent.geofenceTransition)?.apply()
-        makeToastText(context, geofencingEvent.geofenceTransition)
+        val geofenceTransition: Int = if (geofencingEvent.geofenceTransition == -1) {
+            if (Geofence.GEOFENCE_TRANSITION_EXIT == locGeoFencePref?.getInt(LOCATION_GEOFENCE_TRANSITION_ID, Geofence.GEOFENCE_TRANSITION_EXIT))
+                Geofence.GEOFENCE_TRANSITION_ENTER
+            else
+                Geofence.GEOFENCE_TRANSITION_EXIT
+        } else {
+            geofencingEvent.geofenceTransition
+        }
+        locGeoFencePref?.edit()?.putInt(LOCATION_GEOFENCE_TRANSITION_ID, geofenceTransition)?.apply()
+        Log.e(TAG, "geofenceTransition: $geofenceTransition")
+        makeToastText(context, geofenceTransition)
     }
 
     private fun makeToastText(context: Context, geofenceTransition: Int) {

@@ -2,7 +2,6 @@ package com.rshea.geofencing.ui.view
 
 import android.annotation.SuppressLint
 import android.app.Application
-import android.content.SharedPreferences
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
@@ -11,7 +10,6 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.drawable.toBitmap
-import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
@@ -22,16 +20,14 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.rshea.geofencing.R
-import com.rshea.geofencing.data.datasources.dto.LocationLiveData
 import com.rshea.geofencing.databinding.ActivityMapsBinding
+import com.rshea.geofencing.ui.viewmodel.GeofenceViewModel
 import com.rshea.geofencing.ui.viewmodel.LocationViewModel
-import com.rshea.geofencing.ui.viewmodel.SharedViewModel
 import com.rshea.geofencing.util.Constants.BACKGROUND_LOCATION_PERMISSION_REQUEST_CODE
 import com.rshea.geofencing.util.Constants.CAMERA_ZOOM_RADIUS
 import com.rshea.geofencing.util.Constants.GEOFENCE_CIRCLE_STROKE_WIDTH
 import com.rshea.geofencing.util.Constants.GEOFENCE_RADIUS
 import com.rshea.geofencing.util.Constants.LOCATION_ENABLE_ALERT
-import com.rshea.geofencing.util.Constants.LOCATION_GEOFENCE_TRANSITION_ID
 import com.rshea.geofencing.util.Constants.LOCATION_PERMISSION_REQUEST_CODE
 import com.rshea.geofencing.util.Permissions
 import com.rshea.geofencing.util.Permissions.hasBackgroundLocationRequest
@@ -40,7 +36,6 @@ import com.rshea.geofencing.util.Permissions.requestLocationPermission
 import com.vmadalin.easypermissions.EasyPermissions
 import com.vmadalin.easypermissions.dialogs.SettingsDialog
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -63,7 +58,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     }
 
     // Need to add implementation "androidx.fragment:fragment-ktx:1.5.2"
-    private val sharedViewModel: SharedViewModel by viewModels()
+    private val geofenceViewModel: GeofenceViewModel by viewModels()
     private val locationViewModel: LocationViewModel by viewModels()
 
     private var positionMarker: Marker? = null
@@ -219,10 +214,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
     private fun setupGeofence(latLng: LatLng) {
         lifecycleScope.launch {
-            if (sharedViewModel.checkDeviceLocationSettings()) {
-                sharedViewModel.stopGeofence()
+            if (geofenceViewModel.checkDeviceLocationSettings()) {
+                geofenceViewModel.stopGeofence()
                 mMap.clear()
-                sharedViewModel.startGeofence(latLng)
+                geofenceViewModel.startGeofence(latLng)
                 // TODO: zoomToGeofence(circle.center, circle.radius.toFloat())
             } else {
                 Toast.makeText(
@@ -235,7 +230,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
     }
 
     private fun observeDatabase() {
-        sharedViewModel.readGeofence.observe(this) { geofenceEntity ->
+        geofenceViewModel.readGeofence.observe(this) { geofenceEntity ->
             mMap.clear()
             geofenceEntity.forEach { geofence ->
                 addCircle(LatLng(geofence.latitude, geofence.longitude))

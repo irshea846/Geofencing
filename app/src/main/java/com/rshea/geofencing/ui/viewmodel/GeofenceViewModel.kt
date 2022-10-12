@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class SharedViewModel @Inject constructor(
+class GeofenceViewModel @Inject constructor(
     application: Application,
     private val geofenceRepository: GeofenceRepository
 ): AndroidViewModel(application) {
@@ -78,7 +78,7 @@ class SharedViewModel @Inject constructor(
 
     private fun geofencingRequest(geofence: Geofence): GeofencingRequest {
         return GeofencingRequest.Builder().apply {
-            setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
+            //setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
             addGeofence(geofence)
         }.build()
     }
@@ -87,8 +87,8 @@ class SharedViewModel @Inject constructor(
         return Geofence.Builder().apply {
             setCircularRegion(latLng.latitude, latLng.longitude, GEOFENCE_RADIUS)
             setRequestId(GEOFENCE_ID.toString())
-            setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL
-                    or Geofence.GEOFENCE_TRANSITION_EXIT).setLoiteringDelay(GEOFENCE_LOITERING_DELAY)
+            setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_EXIT)
+            setLoiteringDelay(GEOFENCE_LOITERING_DELAY)
             setExpirationDuration(Geofence.NEVER_EXPIRE)
         }.build()
     }
