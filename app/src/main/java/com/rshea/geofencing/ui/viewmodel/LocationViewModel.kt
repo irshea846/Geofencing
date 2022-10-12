@@ -2,7 +2,6 @@ package com.rshea.geofencing.ui.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import com.rshea.geofencing.data.datasources.dto.LocationLiveData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 

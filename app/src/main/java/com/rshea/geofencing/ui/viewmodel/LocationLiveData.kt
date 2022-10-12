@@ -1,4 +1,4 @@
-package com.rshea.geofencing.data.datasources.dto
+package com.rshea.geofencing.ui.viewmodel
 
 import android.annotation.SuppressLint
 import android.app.Application
@@ -7,6 +7,7 @@ import android.content.SharedPreferences
 import android.location.Location
 import androidx.lifecycle.LiveData
 import com.google.android.gms.location.*
+import com.rshea.geofencing.data.datasources.dto.LocationEntity
 import com.rshea.geofencing.util.Constants.LOCATION_GEOFENCE_TRANSITION_ID
 import com.rshea.geofencing.util.Constants.LOCATION_REQUEST_INTERVAL
 
