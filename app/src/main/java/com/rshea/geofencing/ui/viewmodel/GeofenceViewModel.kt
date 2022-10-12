@@ -38,7 +38,7 @@ class GeofenceViewModel @Inject constructor(
 ): AndroidViewModel(application) {
 
     companion object {
-        private const val TAG = "SharedViewModel"
+        private const val TAG = "GeofenceViewModel"
     }
 
     @SuppressLint("StaticFieldLeak")
