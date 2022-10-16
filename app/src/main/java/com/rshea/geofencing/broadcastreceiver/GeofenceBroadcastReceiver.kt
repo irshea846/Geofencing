@@ -21,23 +21,20 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         locGeoFencePref = context.getSharedPreferences(LOCATION_GEOFENCE_TRANSITION_ID, Context.MODE_PRIVATE)
         val geofencingEvent = GeofencingEvent.fromIntent(intent)
-        if (geofencingEvent.hasError()) {
-            val errorMessage = GeofenceStatusCodes
-                .getStatusCodeString(geofencingEvent.errorCode)
-            Log.e(TAG, "error: $errorMessage")
-            return
+        if (geofencingEvent != null) {
+            if (geofencingEvent.hasError()) {
+                val errorMessage = GeofenceStatusCodes
+                    .getStatusCodeString(geofencingEvent.errorCode)
+                Log.e(TAG, "error: $errorMessage")
+                return
+            }
+            val geofenceTransition: Int = geofencingEvent.geofenceTransition
+
+            locGeoFencePref?.edit()?.putInt(LOCATION_GEOFENCE_TRANSITION_ID, geofenceTransition)
+                ?.apply()
+            Log.d(TAG, "geofenceTransition: $geofenceTransition")
+            makeToastText(context, geofenceTransition)
         }
-        val geofenceTransition: Int = if (geofencingEvent.geofenceTransition == -1) {
-            if (Geofence.GEOFENCE_TRANSITION_EXIT == locGeoFencePref?.getInt(LOCATION_GEOFENCE_TRANSITION_ID, Geofence.GEOFENCE_TRANSITION_EXIT))
-                Geofence.GEOFENCE_TRANSITION_ENTER
-            else
-                Geofence.GEOFENCE_TRANSITION_EXIT
-        } else {
-            geofencingEvent.geofenceTransition
-        }
-        locGeoFencePref?.edit()?.putInt(LOCATION_GEOFENCE_TRANSITION_ID, geofenceTransition)?.apply()
-        Log.e(TAG, "geofenceTransition: $geofenceTransition")
-        makeToastText(context, geofenceTransition)
     }
 
     private fun makeToastText(context: Context, geofenceTransition: Int) {
@@ -55,3 +52,4 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
     }
 
 }
+

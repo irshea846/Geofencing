@@ -47,10 +47,8 @@ class LocationLiveData(
     }
 
     private val locationCallback = object: LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult?) {
+        override fun onLocationResult(locationResult: LocationResult) {
             super.onLocationResult(locationResult)
-
-            locationResult ?: return
 
             for (location in locationResult.locations) {
                 setLocationLiveData(location)

@@ -102,7 +102,7 @@ class GeofenceViewModel @Inject constructor(
         // addGeofences() and removeGeofences().
         var flag = PendingIntent.FLAG_UPDATE_CURRENT
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            flag = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            flag = PendingIntent.FLAG_MUTABLE
         }
         pendingIntent = PendingIntent.getBroadcast(context, GEOFENCE_PENDING_INTENT_REQUEST_CODE, intent, flag)
         return pendingIntent as PendingIntent
@@ -128,15 +128,17 @@ class GeofenceViewModel @Inject constructor(
     suspend fun stopGeofence(): Boolean {
         removeOldGeofenceFromDatabase()
         val result = CompletableDeferred<Boolean>()
-        geofencingClient.removeGeofences(pendingIntent)
-            .addOnCompleteListener {
-                if (it.isSuccessful) {
-                    result.complete(true)
-                } else {
-                    result.complete(false)
+        pendingIntent?.let { it ->
+            geofencingClient.removeGeofences(it)
+                .addOnCompleteListener {
+                    if (it.isSuccessful) {
+                        result.complete(true)
+                    } else {
+                        result.complete(false)
+                    }
                 }
-            }
-        return result.await()
+        }
+        return if (pendingIntent == null) false else result.await()
     }
 
     private fun getErrorMessage(e: Exception): String {
