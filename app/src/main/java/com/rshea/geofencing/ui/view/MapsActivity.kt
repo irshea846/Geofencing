@@ -129,11 +129,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
      */
     override fun onMapReady(googleMap: GoogleMap) {
         val riseCafe = LatLng(RISE_CAFE.lat, RISE_CAFE.lng)
-        mMap = googleMap
-        mMap.addMarker(MarkerOptions().position(riseCafe).icon(mBlueMarkerDescriptor))
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(riseCafe, CAMERA_ZOOM_RADIUS))
+        googleMap.apply {
+            addMarker(MarkerOptions().position(riseCafe).icon(mBlueMarkerDescriptor))
+            animateCamera(CameraUpdateFactory.newLatLngZoom(riseCafe, CAMERA_ZOOM_RADIUS))
+            setOnMapLongClickListener(this@MapsActivity)
+            mMap = this
+        }
         enableUserLocation()
-        mMap.setOnMapLongClickListener(this)
         observeDatabase()
     }
 

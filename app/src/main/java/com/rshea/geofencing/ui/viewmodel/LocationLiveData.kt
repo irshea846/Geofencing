@@ -64,10 +64,9 @@ class LocationLiveData(
     }
 
     companion object {
-        var locationRequest: LocationRequest = LocationRequest.create().apply {
-            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-            interval = LOCATION_REQUEST_INTERVAL
-            fastestInterval = LOCATION_REQUEST_INTERVAL / 4
-        }
+        var locationRequest: LocationRequest = LocationRequest.Builder(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            LOCATION_REQUEST_INTERVAL
+        ).build()
     }
 }
