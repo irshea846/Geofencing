@@ -220,7 +220,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
                 geofenceViewModel.stopGeofence()
                 mMap.clear()
                 geofenceViewModel.startGeofence(latLng)
-                // TODO: zoomToGeofence(circle.center, circle.radius.toFloat())
             } else {
                 Toast.makeText(
                     app,

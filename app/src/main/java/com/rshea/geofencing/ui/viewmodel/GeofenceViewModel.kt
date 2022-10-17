@@ -98,7 +98,7 @@ class GeofenceViewModel @Inject constructor(
             return pendingIntent as PendingIntent
         }
         val intent = Intent(context, GeofenceBroadcastReceiver::class.java)
-        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when calling
+        // We use FLAG_UPDATE_CURRENT or FLAG_MUTABLE so that we get the same pending intent back when calling
         // addGeofence() and removeGeofence().
         var flag = PendingIntent.FLAG_UPDATE_CURRENT
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

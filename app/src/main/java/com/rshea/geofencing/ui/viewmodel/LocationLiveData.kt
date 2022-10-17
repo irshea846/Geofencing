@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.location.Location
+import android.util.Log
 import androidx.lifecycle.LiveData
 import com.google.android.gms.location.*
 import com.rshea.geofencing.data.datasources.dto.LocationEntity
@@ -42,7 +43,7 @@ class LocationLiveData(
             locationCallback,
             null
         ).addOnFailureListener {
-            //in case of exception, close the Flow
+            it.message?.let { msg -> Log.e(TAG, msg) }
         }
     }
 
@@ -64,6 +65,7 @@ class LocationLiveData(
     }
 
     companion object {
+        private const val TAG = "LocationLiveData"
         var locationRequest: LocationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
             LOCATION_REQUEST_INTERVAL
