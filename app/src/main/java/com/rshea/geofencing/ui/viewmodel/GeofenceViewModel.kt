@@ -165,7 +165,7 @@ class GeofenceViewModel @Inject constructor(
         } else {
             val mode: Int = Settings.Secure.getInt(
                 context.contentResolver,
-                Settings.Secure.LOCATION_MODE,
+                "LOCATION_MODE",
                 Settings.Secure.LOCATION_MODE_OFF
             )
             mode != Settings.Secure.LOCATION_MODE_OFF
