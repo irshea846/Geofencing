@@ -20,6 +20,7 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.rshea.geofencing.R
+import com.rshea.geofencing.data.datasources.dto.LocationEntity
 import com.rshea.geofencing.databinding.ActivityMapsBinding
 import com.rshea.geofencing.ui.viewmodel.GeofenceViewModel
 import com.rshea.geofencing.ui.viewmodel.LocationViewModel
@@ -54,6 +55,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
         private val RISE_CAFE = object {
             val lat = 37.7737
             val lng = -122.4662
+        }
+
+        fun parseFromLocationEntity(locationEntity: LocationEntity): MarkerOptions {
+            val latitude: Double = locationEntity.lat.toDouble()
+            val longitude: Double = locationEntity.lng.toDouble()
+            return MarkerOptions()
+                .position(LatLng(latitude, longitude))
+                .anchor(0.5f, 0.5f)
         }
     }
 
@@ -186,21 +195,18 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, GoogleMap.OnMapLon
 
     private fun requestLocationUpdates() {
         locationViewModel.getLocationLiveData().observe(this) {
-            val latitude: Double = it.lat.toDouble()
-            val longitude: Double = it.lng.toDouble()
-            val transitionState: Int = it.transitionState
             positionMarker?.remove()
-            val positionMarkerOptions = MarkerOptions()
-                .position(LatLng(latitude, longitude))
-                .anchor(0.5f, 0.5f)
-                .icon(
-                    if (transitionState == Geofence.GEOFENCE_TRANSITION_EXIT)
-                        mBlueMarkerDescriptor else
+            val markOptions: MarkerOptions = parseFromLocationEntity(it).icon(
+                    if (it.transitionState == Geofence.GEOFENCE_TRANSITION_EXIT)
+                        mBlueMarkerDescriptor
+                    else
                         mGreenMarkerDescriptor
                 )
-            positionMarker = mMap.addMarker(positionMarkerOptions)
+
+            positionMarker = mMap.addMarker(markOptions)
         }
     }
+
 
     override fun onMapLongClick(latLng: LatLng) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
